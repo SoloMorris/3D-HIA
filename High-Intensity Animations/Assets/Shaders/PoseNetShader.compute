@@ -1,0 +1,40 @@
+// Each #kernel tells which function to compile; you can have many kernels
+
+#pragma kernel PreprocessResNet
+#pragma kernel PreprocessMobileNet
+#pragma kernel ScaleInputImage
+#pragma kernel CSMain
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+Texture2D<half4> InputImage;
+[numthreads(8,8,1)]
+void PreprocessResNet(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = half4((InputImage[id.xy].x * 255.0h) - 123.15h,
+        (InputImage[id.xy].y * 255.0h) - 115.90h,
+        (InputImage[id.xy].z * 255.0h) - 103.06h, 1.0h);
+}
+
+[numthreads(8,8,1)]
+void PreprocessMobileNet(uint3 id: SV_DispatchThreadID)
+{
+    Result[id.xy] = half4(
+        2.0h * InputImage[id.xy].r / 1.0h - 1.0h,
+        2.0h * InputImage[id.xy].g / 1.0h - 1.0h,
+        2.0h * InputImage[id.xy].b / 1.0h - 1.0h,
+        InputImage[id.xy].a);
+}
+
+[numthreads(8,8,1)]
+void ScaleInputImage(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = half4(InputImage[id.xy].x / 255.0h,
+        InputImage[id.xy].y / 255.0h,
+        InputImage[id.xy].z / 255.0h, 1.0h);
+}
+[numthreads(8,8,1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    Result[id.xy] = float4(id.x & id.y, (id.x & 15)/ 15.0, (id.y & 15)/15.0, 0.0);
+}
